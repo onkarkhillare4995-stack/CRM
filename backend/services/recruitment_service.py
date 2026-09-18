@@ -726,13 +726,132 @@ async def list_followups(db, actor, perms, *, scope="all"):
     return rows
 
 
+def _day_bounds(now):
+    start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    return start, start + timedelta(days=1)
+
+
+async def followup_board(db, actor, perms, *, tab="due_today", search="", recruiter_id=""):
+    ids = await scope_service.recruiter_scope_ids(db, actor, perms)
+    base = {} if ids is None else {"recruiter_id": {"$in": ids}}
+    if recruiter_id:
+        if ids is not None and recruiter_id not in ids:
+            base["recruiter_id"] = "__none__"
+        else:
+            base["recruiter_id"] = recruiter_id
+    now = now_utc()
+    ts, te = _day_bounds(now)
+    tom_s, tom_e = te, te + timedelta(days=1)
+    tabs = {
+        "due_today": {**base, "status": "pending", "due_at": {"$gte": ts, "$lt": te}},
+        "overdue": {**base, "status": "pending", "due_at": {"$lt": now}},
+        "tomorrow": {**base, "status": "pending", "due_at": {"$gte": tom_s, "$lt": tom_e}},
+        "upcoming": {**base, "status": "pending", "due_at": {"$gte": tom_e}},
+        "missed": {**base, "status": "superseded"},
+        "completed": {**base, "status": "done"},
+    }
+    counts = {}
+    for k, q in tabs.items():
+        counts[k] = await db.followups.count_documents(q)
+    rows = await db.followups.find(tabs.get(tab, tabs["due_today"]), {"_id": 0}).sort("due_at", 1).to_list(500)
+    # enrich with lead priority/status/phone (+ search filter)
+    lead_ids = list({r["lead_id"] for r in rows})
+    leads = {l["id"]: l for l in await db.leads.find({"id": {"$in": lead_ids}}).to_list(len(lead_ids) + 1)}
+    out = []
+    s = search.lower().strip()
+    for r in rows:
+        l = leads.get(r["lead_id"], {})
+        if s and s not in (l.get("name", "").lower()) and s not in (l.get("phone", "")):
+            continue
+        r["priority"] = l.get("priority")
+        r["lead_status"] = l.get("status")
+        r["phone"] = l.get("phone")
+        r["overdue"] = r.get("status") == "pending" and _as_utc(r.get("due_at")) and _as_utc(r["due_at"]) < now
+        out.append(r)
+    return {"items": out, "counts": counts, "tab": tab}
+
+
+async def complete_followup(db, actor, perms, followup_id, data):
+    fu = await db.followups.find_one({"id": followup_id})
+    if not fu:
+        raise AppError("not_found", "Follow-up not found", 404)
+    lead = await db.leads.find_one({"id": fu["lead_id"]})
+    await scope_service.assert_lead_access(db, actor, perms, lead or {"owner_id": fu["recruiter_id"]})
+
+    if data.mode == "next":
+        if not data.next_due_at:
+            raise AppError("bad_request", "Next follow-up date/time is required", 400)
+        if not (data.next_reason or "").strip():
+            raise AppError("bad_request", "Next follow-up reason is required", 400)
+    elif data.mode == "final":
+        if not data.final_status or data.final_status not in LEAD_STATUSES:
+            raise AppError("bad_request", "A valid final status is required", 400)
+        if data.final_status in REASON_REQUIRED_STATUSES and not (data.closure_reason or "").strip():
+            raise AppError("reason_required", f"A closure reason is required for {data.final_status}", 400)
+        if data.final_status == "selected" and not data.expected_joining_date:
+            raise AppError("joining_required", "Expected joining date is required for Selected", 400)
+    else:
+        raise AppError("bad_request", "Invalid completion mode", 400)
+
+    now = now_utc()
+    async with atomic() as s:
+        await db.followups.update_one({"id": followup_id},
+            {"$set": {"status": "done", "completed_at": now, "outcome": data.outcome,
+                      "outcome_notes": data.notes}}, session=s)
+        await write_activity(db, fu["lead_id"], "followup_completed", actor,
+                             f"Follow-up completed{': ' + data.outcome if data.outcome else ''}",
+                             {"outcome": data.outcome}, session=s)
+        if data.mode == "next":
+            ndoc = {"id": new_id(), "lead_id": fu["lead_id"], "lead_name": fu.get("lead_name"),
+                    "recruiter_id": fu["recruiter_id"], "due_at": data.next_due_at, "status": "pending",
+                    "reason": data.next_reason, "notes": None, "created_at": now, "created_by": actor["id"]}
+            await db.followups.insert_one(ndoc, session=s)
+            await db.leads.update_one({"id": fu["lead_id"]},
+                {"$set": {"next_followup_at": data.next_due_at, "last_activity_at": now}}, session=s)
+            await write_activity(db, fu["lead_id"], "followup_scheduled", actor,
+                                 f"Next follow-up scheduled: {data.next_reason}",
+                                 {"due_at": str(data.next_due_at)}, session=s)
+    if data.mode == "final":
+        await transition_status(db, actor, perms, fu["lead_id"], data.final_status,
+                                note="Completed via follow-up", closure_reason=data.closure_reason,
+                                expected_joining_date=data.expected_joining_date)
+    await _recompute_next_followup(db, fu["lead_id"])
+    return clean(await db.followups.find_one({"id": followup_id}))
+
+
+async def delete_followup(db, actor, perms, followup_id):
+    fu = await db.followups.find_one({"id": followup_id})
+    if not fu:
+        raise AppError("not_found", "Follow-up not found", 404)
+    lead = await db.leads.find_one({"id": fu["lead_id"]})
+    await scope_service.assert_lead_access(db, actor, perms, lead or {"owner_id": fu["recruiter_id"]})
+    await db.followups.delete_one({"id": followup_id})
+    await write_activity(db, fu["lead_id"], "followup_completed", actor, "Follow-up deleted", {})
+    await _recompute_next_followup(db, fu["lead_id"])
+    return {"deleted": True}
+
+
 # ---------------- Tasks ----------------
-async def list_tasks(db, actor, perms, *, status=""):
+async def list_tasks(db, actor, perms, *, status="", priority="", search=""):
     ids = await scope_service.recruiter_scope_ids(db, actor, perms)
     q = {} if ids is None else {"owner_id": {"$in": ids}}
     if status:
         q["status"] = status
+    if priority:
+        q["priority"] = priority
+    if search:
+        q["$or"] = [{"title": {"$regex": search, "$options": "i"}},
+                    {"related_entity": {"$regex": search, "$options": "i"}}]
     return await db.tasks.find(q, {"_id": 0}).sort("due_at", 1).to_list(500)
+
+
+async def task_summary(db, actor, perms):
+    ids = await scope_service.recruiter_scope_ids(db, actor, perms)
+    base = {} if ids is None else {"owner_id": {"$in": ids}}
+    pending = await db.tasks.count_documents({**base, "status": {"$in": ["pending", "in_progress"]}})
+    high = await db.tasks.count_documents({**base, "priority": "high", "status": {"$ne": "done"}})
+    completed = await db.tasks.count_documents({**base, "status": "done"})
+    return {"pending": pending, "high_priority": high, "completed": completed}
 
 
 async def create_task(db, actor, perms, data):
@@ -742,8 +861,10 @@ async def create_task(db, actor, perms, data):
         if ids is not None and owner not in ids:
             raise AppError("forbidden", "Owner outside scope", 403)
     doc = {"id": new_id(), "title": data.title.strip(), "owner_id": owner,
-           "lead_id": data.lead_id, "due_at": data.due_at, "priority": data.priority,
-           "status": "pending", "created_at": now_utc(), "created_by": actor["id"]}
+           "category": data.category or "general_admin", "lead_id": data.lead_id,
+           "related_entity": data.related_entity, "notes": data.notes,
+           "due_at": data.due_at, "priority": data.priority, "status": "pending",
+           "created_at": now_utc(), "created_by": actor["id"]}
     await db.tasks.insert_one(doc)
     return clean(doc)
 
@@ -760,8 +881,21 @@ async def update_task(db, actor, perms, task_id, data):
         raise AppError("bad_request", "Invalid status", 400)
     if p.get("status") == "done":
         p["completed_at"] = now_utc()
+    if p.get("status") in ("pending", "in_progress"):
+        p["completed_at"] = None
     await db.tasks.update_one({"id": task_id}, {"$set": p})
     return clean(await db.tasks.find_one({"id": task_id}))
+
+
+async def delete_task(db, actor, perms, task_id):
+    task = await db.tasks.find_one({"id": task_id})
+    if not task:
+        raise AppError("not_found", "Task not found", 404)
+    ids = await scope_service.recruiter_scope_ids(db, actor, perms)
+    if ids is not None and task["owner_id"] not in ids:
+        raise AppError("forbidden", "Task outside scope", 403)
+    await db.tasks.delete_one({"id": task_id})
+    return {"deleted": True}
 
 
 # ---------------- Interviews ----------------

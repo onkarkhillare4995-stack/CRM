@@ -6,9 +6,9 @@ from core.database import db
 from core.logging_config import correlation_id_ctx
 from models.recruitment import (
     LeadCreate, LeadUpdate, StatusChange, CallCreate, DispositionCreate, FollowupCreate,
-    FollowupUpdate, TagsUpdate, NoteCreate, NoteUpdate, AssignRequest, TransferRequest,
-    AutoDistributeRequest, TaskCreate, TaskUpdate, InterviewCreate, InterviewUpdate,
-    JoiningCreate, JoiningUpdate,
+    FollowupUpdate, FollowupComplete, TagsUpdate, NoteCreate, NoteUpdate, AssignRequest,
+    TransferRequest, AutoDistributeRequest, TaskCreate, TaskUpdate, InterviewCreate,
+    InterviewUpdate, JoiningCreate, JoiningUpdate,
 )
 from services import recruitment_service as rs, audit_service, permission_service
 from api.deps import get_current_user, require_permission, get_client_ip
@@ -252,6 +252,33 @@ async def list_followups(scope: str = Query("all"), user: dict = Depends(require
     return await rs.list_followups(db, user, perms, scope=scope)
 
 
+@router.get("/followups/board")
+async def followup_board(tab: str = Query("due_today"), search: str = Query(""),
+                         recruiter_id: str = Query(""),
+                         user: dict = Depends(require_permission("followups.manage"))):
+    perms = await _perms(user)
+    return await rs.followup_board(db, user, perms, tab=tab, search=search, recruiter_id=recruiter_id)
+
+
+@router.post("/followups/{followup_id}/complete")
+async def complete_followup(followup_id: str, payload: FollowupComplete, request: Request,
+                            user: dict = Depends(require_permission("followups.manage"))):
+    perms = await _perms(user)
+    fu = await rs.complete_followup(db, user, perms, followup_id, payload)
+    await _audit(user, request, "followups.complete", "followup", followup_id,
+                 {"mode": payload.mode, "outcome": payload.outcome})
+    return fu
+
+
+@router.delete("/followups/{followup_id}")
+async def delete_followup(followup_id: str, request: Request,
+                          user: dict = Depends(require_permission("followups.manage"))):
+    perms = await _perms(user)
+    res = await rs.delete_followup(db, user, perms, followup_id)
+    await _audit(user, request, "followups.delete", "followup", followup_id, {}, severity="warning")
+    return res
+
+
 @router.post("/leads/{lead_id}/followups")
 async def add_followup(lead_id: str, payload: FollowupCreate, request: Request,
                        user: dict = Depends(require_permission("followups.manage"))):
@@ -272,9 +299,16 @@ async def update_followup(followup_id: str, payload: FollowupUpdate, request: Re
 
 # ---------------- Tasks ----------------
 @router.get("/tasks")
-async def list_tasks(status: str = Query(""), user: dict = Depends(require_permission("tasks.manage"))):
+async def list_tasks(status: str = Query(""), priority: str = Query(""), search: str = Query(""),
+                     user: dict = Depends(require_permission("tasks.manage"))):
     perms = await _perms(user)
-    return await rs.list_tasks(db, user, perms, status=status)
+    return await rs.list_tasks(db, user, perms, status=status, priority=priority, search=search)
+
+
+@router.get("/tasks/summary")
+async def task_summary(user: dict = Depends(require_permission("tasks.manage"))):
+    perms = await _perms(user)
+    return await rs.task_summary(db, user, perms)
 
 
 @router.post("/tasks")
@@ -293,6 +327,15 @@ async def update_task(task_id: str, payload: TaskUpdate, request: Request,
     task = await rs.update_task(db, user, perms, task_id, payload)
     await _audit(user, request, "tasks.update", "task", task_id, {"status": task.get("status")})
     return task
+
+
+@router.delete("/tasks/{task_id}")
+async def delete_task(task_id: str, request: Request,
+                      user: dict = Depends(require_permission("tasks.manage"))):
+    perms = await _perms(user)
+    res = await rs.delete_task(db, user, perms, task_id)
+    await _audit(user, request, "tasks.delete", "task", task_id, {}, severity="warning")
+    return res
 
 
 # ---------------- Interviews ----------------

@@ -61,7 +61,9 @@ LEAD_PRIORITIES = ["low", "medium", "high"]
 GENDERS = ["male", "female", "other"]
 INTERVIEW_TYPES = ["walkin", "telephonic", "virtual", "f2f"]
 FOLLOWUP_STATUS = ["pending", "done", "cancelled", "superseded"]
-TASK_STATUS = ["pending", "done", "cancelled"]
+TASK_STATUS = ["pending", "in_progress", "done", "cancelled"]
+TASK_CATEGORIES = ["candidate_followup", "client_followup", "vendor_followup",
+                   "interview_prep", "marketing_task", "general_admin"]
 INTERVIEW_STATUS = ["scheduled", "confirmed", "attended", "no_show", "selected", "rejected"]
 JOINING_STATUS = ["pending", "confirmed", "joined", "dropped"]
 
@@ -169,6 +171,17 @@ class FollowupUpdate(BaseModel):
     notes: Optional[str] = None
 
 
+class FollowupComplete(BaseModel):
+    outcome: Optional[str] = None
+    notes: Optional[str] = None
+    mode: str = "next"  # "next" | "final"
+    next_due_at: Optional[datetime] = None
+    next_reason: Optional[str] = None
+    final_status: Optional[str] = None
+    closure_reason: Optional[str] = None
+    expected_joining_date: Optional[datetime] = None
+
+
 class TagsUpdate(BaseModel):
     tags: List[str]
 
@@ -198,17 +211,23 @@ class AutoDistributeRequest(BaseModel):
 
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
+    category: str = "general_admin"
     due_at: Optional[datetime] = None
     priority: str = "medium"
     lead_id: Optional[str] = None
+    related_entity: Optional[str] = None
+    notes: Optional[str] = None
     owner_id: Optional[str] = None
 
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
+    category: Optional[str] = None
     due_at: Optional[datetime] = None
     priority: Optional[str] = None
     status: Optional[str] = None
+    related_entity: Optional[str] = None
+    notes: Optional[str] = None
 
 
 class InterviewCreate(BaseModel):

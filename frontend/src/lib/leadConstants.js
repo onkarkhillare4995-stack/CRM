@@ -48,6 +48,16 @@ export const INTERVIEW_TYPES = [
   { value: "virtual", label: "Virtual" }, { value: "f2f", label: "Face to Face" },
 ];
 
+export const TASK_CATEGORIES = [
+  { value: "candidate_followup", label: "Candidate follow-up" },
+  { value: "client_followup", label: "Client follow-up" },
+  { value: "vendor_followup", label: "Vendor follow-up" },
+  { value: "interview_prep", label: "Interview prep" },
+  { value: "marketing_task", label: "Marketing task" },
+  { value: "general_admin", label: "General admin" },
+];
+export const TASK_CATEGORY_LABEL = Object.fromEntries(TASK_CATEGORIES.map((c) => [c.value, c.label]));
+
 export const SAVED_VIEWS = [
   { key: "all", label: "All" }, { key: "fresh", label: "Fresh Leads" },
   { key: "not_called", label: "Not Called" }, { key: "todays_followups", label: "Today's Follow-ups" },
