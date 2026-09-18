@@ -1,0 +1,39 @@
+{
+  "summary": "Prompt #2 auth suite fully tested against public URL + Mongo. Backend: 13/13 pytest cases pass in /app/backend/tests/test_auth_prompt2.py (auth config, google-503, correct/wrong login, logout revocation, forgot-password neutrality, rate-limit after 10 fails, inactive-user block, change-password wrong/weak/valid + persistence, reset-password weak policy/expired/single-use, recruiter RBAC on admin endpoints). Frontend Playwright: login page loads, Google button hidden (google_enabled=false), password show/hide toggle switches type password<->text, wrong password shows invalid toast, correct admin lands on /admin/dashboard, user menu shows name/email/role, change-password dialog opens via change-password-menu-item, logout returns to /login. Email provider is live: backend logs show POST https://integrations.emergentagent.com/api/v1/email/send returning 202 Accepted with no token/password ever logged.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_auth_prompt2.py",
+    "/app/test_reports/pytest/auth_prompt2_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "auth_service.authenticate registers a failure on invalid credentials but does NOT register one when the account is inactive (line 69-70). If desired to also throttle probes against known-disabled accounts, register a failure before the is_active check. Not a bug per se.",
+    "Rate-limit key is `ip:email` — from the public preview the source IP is the ingress, so effectively per-account throttling. Fine for the spec but note that a malicious client sharing the ingress cannot lock other accounts (good), but also that a single attacker can rotate emails to avoid backoff (acceptable given per-account lockout).",
+    "reset_password revokes ALL sessions after use (services/auth_service.py:159). change_password keeps the current session (:176). Both consistent with spec.",
+    "Frontend Login.js still keeps a placeholder handleGoogle() that only checks window.google?.accounts?.id — the button is now gated by /auth/config so it's dead code today, but leaving it while Google is disabled is fine.",
+    "auth_routes.refresh has a redundant `from core.errors import AppError` re-import inside the function (line 71, 75). Minor cleanup."
+  ],
+  "updated_files": ["/app/backend/tests/test_auth_prompt2.py"],
+  "success_rate": {"backend": "100% (13/13 new + previous 25 still valid)", "frontend": "100% of tested flows"},
+  "test_credentials": "Admin: okhillare23@gmail.com / Admin@Oak2026 | TL: teamlead@oaksphere.demo / TeamLead@123 | Rec: recruiter@oaksphere.demo / Recruiter@123 (all restored after tests)",
+  "seed_data_creation": "Temporary password_reset_tokens docs (id prefix TEST_) created + deleted in the same tests. Recruiter password briefly changed to NewPass1Word (change-password) and TempReset1Pw (reset-password) — both reverted to Recruiter@123 in test teardown. Recruiter is_active toggled to false then back to true. login_attempts records for test emails cleared.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "verified_features": [
+    "GET /api/auth/config -> {google_enabled:false, email_enabled:true}",
+    "POST /api/auth/google -> 503 not_configured",
+    "Google button not rendered on /login (data-testid=google-signin-button absent)",
+    "Correct admin login -> 200 with access_token + user + permissions; wrong password -> 401 invalid_credentials",
+    "login-password-toggle switches input type from password to text",
+    "Logout -> 200; reusing the bearer token returns 401 on /api/auth/me (session revoked)",
+    "Rate limit: 10 failed attempts on same email/IP -> 429 rate_limited",
+    "Inactive user (recruiter is_active=false) -> 403 account_disabled; reactivation restores login",
+    "Forgot-password returns identical message body for existing and unknown emails; existing email triggers httpx POST to integrations.emergentagent.com/api/v1/email/send returning 202; audit log has email_sent=true without token/link",
+    "Reset-password: weak password (no digit) -> 400 weak_password; expired token (past expires_at) -> 400 invalid_token; single-use enforced (2nd reuse -> 400 invalid)",
+    "Change-password (logged-in recruiter): wrong current -> 400 invalid_credentials; weak new (no digit) -> 400 weak_password; too-short -> 422; valid change succeeds and new password logs in while old does not",
+    "Recruiter RBAC: GET /api/users, POST /api/users, GET /api/users/{other_id} all 403",
+    "User menu shows name + email + role + Change password + Log out (data-testids present)"
+  ],
+  "context_for_next_testing_agent": "Backend pytest.ini enforces `-n 2 --dist loadscope`. Use `-n 0` to run this suite serially (not `-p no:xdist`). Motor async client can't be shared across pytest event loops — use pymongo (synchronous) for setup/cleanup. When probing invalid users via /api/auth/login and /api/auth/forgot-password, pydantic EmailStr rejects some TLDs (e.g. .local, .tld) with 422 — use example.com. Rate-limit lockout is keyed by `ip:email`, defaults 10 fails / 15 min; clear via db.login_attempts.delete_many. Emergent email provider is live and returns 202 through /api/v1/email/send at integrations.emergentagent.com; do NOT web-search Emergent internals."
+}

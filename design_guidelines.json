@@ -1,0 +1,191 @@
+{
+  "application_type": "saas_app",
+  "archetype": "THE PERFORMANCE PRO (Tactical Recruitment Operations)",
+  "design_tone": "High-density, precision B2B recruitment CRM with role-based scoping, tactile clarity, and crisp visual hierarchy",
+  "theme_strategy": {
+    "default_mode": "light",
+    "toggle_supported": true,
+    "dark_mode_class": "dark"
+  },
+  "colors": {
+    "palette_name": "OAKsphere Deep Slate & Kinetic Indigo",
+    "primary": {
+      "light": "#0F172A",
+      "dark": "#F8FAFC",
+      "label": "Deep Slate Anchor"
+    },
+    "brand_accent": {
+      "light": "#4F46E5",
+      "hover": "#4338CA",
+      "dark": "#6366F1",
+      "label": "Kinetic Indigo CTA"
+    },
+    "status": {
+      "success": "#059669",
+      "success_bg": "rgba(5, 150, 105, 0.1)",
+      "warning": "#D97706",
+      "warning_bg": "rgba(217, 119, 6, 0.1)",
+      "destructive": "#DC2626",
+      "destructive_bg": "rgba(220, 38, 38, 0.1)",
+      "info": "#0284C7",
+      "info_bg": "rgba(2, 132, 199, 0.1)"
+    },
+    "surfaces": {
+      "light": {
+        "page_bg": "#F8FAFC",
+        "sidebar_bg": "#0F172A",
+        "sidebar_fg": "#F8FAFC",
+        "sidebar_active": "rgba(255, 255, 255, 0.12)",
+        "sidebar_hover": "rgba(255, 255, 255, 0.06)",
+        "card_bg": "#FFFFFF",
+        "header_bg": "rgba(255, 255, 255, 0.95)",
+        "table_header": "#F1F5F9",
+        "border": "#E2E8F0"
+      },
+      "dark": {
+        "page_bg": "#090D16",
+        "sidebar_bg": "#0F172A",
+        "sidebar_fg": "#F8FAFC",
+        "sidebar_active": "rgba(255, 255, 255, 0.15)",
+        "sidebar_hover": "rgba(255, 255, 255, 0.08)",
+        "card_bg": "#111827",
+        "header_bg": "rgba(17, 24, 39, 0.95)",
+        "table_header": "#1F2937",
+        "border": "#1F2937"
+      }
+    },
+    "rules": [
+      "Never use pure #000000 or full transparent dropdown menus.",
+      "Dropdowns, select overlays, popovers, and sticky headers MUST use a solid or semi-opaque background (e.g., bg-white/95 dark:bg-slate-900/95 with backdrop-blur-md).",
+      "Contrast ratio minimum 4.5:1 for normal text and 3:1 for badges/labels.",
+      "Role scope badge colors: Admin = Purple/Slate, Team Leader = Indigo/Blue, Recruiter = Emerald/Teal."
+    ]
+  },
+  "typography": {
+    "headings": {
+      "font_family": "Plus Jakarta Sans, Outfit, sans-serif",
+      "weights": {
+        "h1": "font-bold tracking-tight text-3xl sm:text-4xl",
+        "h2": "font-semibold tracking-tight text-xl sm:text-2xl",
+        "h3": "font-semibold text-lg sm:text-xl",
+        "h4": "font-medium text-base"
+      }
+    },
+    "body": {
+      "font_family": "Inter, system-ui, sans-serif",
+      "styles": {
+        "normal": "text-sm text-slate-700 dark:text-slate-300 leading-relaxed",
+        "small": "text-xs text-slate-500 dark:text-slate-400",
+        "mono": "font-mono text-xs tracking-wider"
+      }
+    },
+    "prohibited_heading_fonts": [
+      "Inter",
+      "Space Grotesk"
+    ]
+  },
+  "layout_and_spacing": {
+    "grid_mode": "MODE B: High Density Grid (Admin & Operational Data)",
+    "container_paddings": "px-4 sm:px-6 lg:px-8 py-6",
+    "card_padding": "p-5 sm:p-6",
+    "shell_structure": {
+      "sidebar_width": "w-64",
+      "collapsed_sidebar_width": "w-16",
+      "header_height": "h-16",
+      "content_area": "flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 p-6"
+    },
+    "alignment_rules": "Left-align all data tables, input fields, forms, and headers. Center action buttons inside cards only if visually balanced."
+  },
+  "role_scoping_rules": {
+    "scope_switcher": "Header shows current user active role badge and scope context badge (e.g. 'Scope: My Pipeline' vs 'Scope: Team East' vs 'Scope: Organization Wide')",
+    "roles": {
+      "ADMIN": {
+        "access": "Full access to Users, Roles & Permissions Matrix, Audit Logs, Org Settings, All Leads/Jobs/Clients",
+        "badge_style": "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300"
+      },
+      "TEAM_LEAD": {
+        "access": "Team scope: View & manage team members, assign leads/tasks, view team audit logs & metrics",
+        "badge_style": "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300"
+      },
+      "RECRUITER": {
+        "access": "Self scope: View & manage personal leads, tasks, followups, applications",
+        "badge_style": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
+      }
+    }
+  },
+  "key_screens_design": {
+    "login_and_password_reset": {
+      "layout": "Two-column split screen: Left branding artwork & key statistics callout, Right clean high-contrast auth card",
+      "features": "Login form, Forgot password view, Role selector hint, Password reset trigger toast"
+    },
+    "dashboard_shell": {
+      "layout": "Fixed left dark navigation bar + sticky light/dark glass header + high-density main content area",
+      "nav_items": [
+        "Dashboard Overview",
+        "User Management",
+        "Roles & Permissions",
+        "Audit Log Viewer",
+        "Leads & Candidates (Placeholder)",
+        "Jobs & Clients (Placeholder)",
+        "Followups & Tasks",
+        "Organization Settings"
+      ],
+      "header_controls": [
+        "Global Quick Search (Cmd+K modal trigger)",
+        "Role Scope Pill Indicator",
+        "Notifications Bell Popover",
+        "User Profile & Logout Dropdown",
+        "Theme Toggle"
+      ]
+    },
+    "user_management": {
+      "layout": "Header with 'Add User' modal button + Filter Bar (Search, Role filter, Status active/inactive) + Data Table + Scope statistics cards",
+      "features": "User table with avatar, role badge, department, assigned team leader, status toggle switch, edit/deactivate action menu"
+    },
+    "roles_and_permissions": {
+      "layout": "Role Selector Tabs / List on left + Granular Permission Matrix Grid on right",
+      "matrix": "Grouped by module (Users, Leads, Audit Logs, Settings) x Actions (Create, Read, Update, Delete, Export, Assign)"
+    },
+    "audit_log_viewer": {
+      "layout": "Filter toolbar (Date range, User, Action type, Severity level, Search query) + Expandable Chronological Audit Timeline Table",
+      "features": "IP address, timestamp, actor role, JSON payload diff modal preview, export CSV button"
+    }
+  },
+  "component_guidelines": {
+    "tables": "Dense rows, sticky header, hover bg-slate-100 dark:hover:bg-slate-800/50, explicit column widths, action drop-down menus",
+    "dialogs_and_modals": "Radix UI / Shadcn Dialog with backdrop overlay bg-slate-900/60 backdrop-blur-sm, clear header & footer actions",
+    "toasts": "Sonner toast system with explicit success/error/warning icons and high-contrast text",
+    "buttons": "Pill-shaped or rounded-md with hover opacity transition and focus-ring. Primary = Kinetic Indigo, Secondary = Slate outlines."
+  },
+  "testing_attributes": {
+    "requirement": "ALL interactive and key data elements MUST have data-testid attributes in kebab-case",
+    "examples": [
+      "data-testid='login-email-input'",
+      "data-testid='login-submit-button'",
+      "data-testid='user-table-row-1'",
+      "data-testid='role-permission-checkbox-users-create'",
+      "data-testid='audit-log-filter-user-select'",
+      "data-testid='sidebar-nav-user-management'"
+    ]
+  },
+  "image_urls": {
+    "user_avatars": [
+      {
+        "url": "https://images.pexels.com/photos/18848926/pexels-photo-18848926.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Female senior recruiter profile avatar"
+      },
+      {
+        "url": "https://images.pexels.com/photos/18848927/pexels-photo-18848927.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Executive team leader profile avatar"
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Build full React JS client components (using .js extension as configured in React project).",
+    "Implement mock API services with realistic state persistence for Auth, Users, Roles, Permissions, Audit Logs, and Scope switching.",
+    "Ensure complete responsive layout for mobile and desktop viewports.",
+    "Strictly follow data-testid naming conventions on all form fields, buttons, nav items, and table rows.",
+    "Make sure navigation active items and scoped breadcrumbs dynamically reflect current role (Admin / Team Lead / Recruiter).",
+    "Use standard Radix UI / Shadcn primitives already installed in node_modules, ensuring popovers/dropdowns have non-transparent solid/blur backgrounds."
+  ]
+}

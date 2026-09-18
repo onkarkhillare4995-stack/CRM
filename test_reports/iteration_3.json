@@ -1,0 +1,45 @@
+{
+  "summary": "Prompts 3-6 tested end-to-end. Backend pytest: 21/21 passing in /app/backend/tests/test_recruitment_prompts3to6.py. Verified: (a) Dashboard KPIs exactly match seeded values for admin (fresh=8, interested=4, selected=2, joined=2, calls_today=4, connected=2, leads_added_today=22). Recruiter scope returns leads_added_today=17 and can_filter_recruiter=false; team_leader=22. Admin recruiter_id filter narrows to owner. Fresh Leads => /api/leads?status=new returns 8 items. (b) My Day recruiter counts match spec exactly {overdue:2, today:3, never_called:5, high_priority:2, iv_conf:2, join_conf:1, tasks:2}; completing a today followup decrements the count on next fetch (live). (c) Quick actions: POST /leads and POST /tasks persist and appear in list. (d) Access-Control admin: /users, /roles/permissions/catalog, /users/{id}/effective-permissions, role clone->rename->update->delete lifecycle (with audit old->new), /users/{id}/sessions + /revoke-sessions, admin role modification blocked (400). (e) Security: recruiter -> 403 on /users, /roles, /leads/transfer, /audit-logs; recruiter cannot read/edit another recruiter's lead (403); recruiter_id=<other> yields 0; recruiter cannot self-escalate role (403); admin cannot change own role (400); admin cannot deactivate last admin (400). (f) Lead status engine writes leads.status audit with from/to and calls.log audit. Frontend Playwright: admin login shows product-label 'Recruitment CRM', quick-action-trigger, notification-bell (7 unread), all 3 sidebar groups (Recruitment Pipeline, Clients & Mandates, Analytics & Settings) with Access Control/Audit Logs/Settings/Integrations/Import Leads visible. Clicking kpi-fresh_leads navigates to /admin/leads?status=new. Access Control page renders 5 tabs (tab-users/roles/permissions/team/sessions). Recruiter login: sidebar does NOT expose Access Control/Audit/Settings/Integrations/Import; shows My Day + My Leads. Direct URL /admin/settings, /admin/audit-logs, /admin/recruiters all render 'Access denied — You do not have permission to view this section.' My Day page renders with 7 myday-step-* keys and progress %. Notification bell shows unread count derived from user's overdue/today follow-ups + interviews.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_recruitment_prompts3to6.py",
+    "/app/test_reports/pytest/prompts3to6.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "services/dashboard_service.py: recruiter_id filter in compute() maps any non-scope id to ['__none__'] and shows 0 KPIs. That's correct denial behaviour, but the API returns 200 rather than 403; recommend documenting so clients don't confuse 'no data' with 'valid empty result'.",
+    "services/myday_service.py: progress_percent uses steps_complete / total_steps, but a step is 'complete' only when count==0. Progress therefore reports 0% for a recruiter who still has any pending item in ANY of the 7 lists — even if 6 lists are already clear (e.g. Jordan currently 0%). Consider weighting by remaining items or reporting per-step completion for a smoother UX.",
+    "api/recruitment_routes.py::list_leads: response shape swings between list and {items:...}. Frontend already tolerates both, but consider always returning {items, total, page, page_size} for consistency and paging correctness.",
+    "api/dashboard_routes.py::overview: parse_range default (no query params) uses org timezone 'today' — good. However, dashboard aggregates like 'calls_today' and 'leads_added_today' both use the same rng; explicit test verifies exact seeded counts so any tz drift is caught here. Keep the seed_service tied to the same tz to avoid future flakiness.",
+    "services/user_service.set_active: revokes sessions on deactivation (good) but does not revoke sessions on role change; consider revoking on role change so cached permission scopes cannot outlive the change. Not blocking.",
+    "role_routes.update_role blocks 'admin' with 400 (good). But there is no similar block on delete_role for role_key == 'admin' if is_system was accidentally false — extra defensive check recommended."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_recruitment_prompts3to6.py"
+  ],
+  "success_rate": {"backend": "100% (21/21)", "frontend": "100% of tested flows"},
+  "test_credentials": "As per /app/memory/test_credentials.md — Admin okhillare23@gmail.com/Admin@Oak2026; TL teamlead@oaksphere.demo/TeamLead@123; Recruiter recruiter@oaksphere.demo/Recruiter@123; Recruiter2 recruiter2@oaksphere.demo/Recruiter@456. All credentials confirmed working; no passwords modified.",
+  "seed_data_creation": "Tests created TEST_-prefixed lead + task via recruiter (persist checks); role clone->delete cycle for a temp key. My Day live-update test marked ONE today follow-up as 'done' (permanent). Sessions revoked for recruiter2 (they will need to re-login on next preview visit but credential still valid). No admin data mutated.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "verified_features": [
+    "Dashboard admin KPIs exact seeded counts + funnel(6) + leaderboard(<=5) + comparison(>=2)",
+    "Recruiter scope: scope_label=My Pipeline, can_filter_recruiter=false, leads_added_today=17",
+    "Team leader scope leads_added_today=22",
+    "Admin recruiter_id filter -> Jordan's 17",
+    "Fresh Leads deep-link filter returns 8 status=new",
+    "My Day 7 queues with exact seeded counts and live update on followup completion",
+    "Quick Actions: POST /leads + POST /tasks persist",
+    "Access Control admin: users list, permissions catalog, effective permissions, role clone/rename/update/reset/delete audited",
+    "Admin role permissions immutable (400)",
+    "Sessions list + revoke-all",
+    "Recruiter forbidden on /users, /roles, /leads/transfer, /audit-logs (403)",
+    "Recruiter cannot read/edit other recruiter lead (403); recruiter_id bypass returns 0",
+    "Recruiter cannot self-escalate role (403); admin cannot change own role (400); admin cannot deactivate last admin (400)",
+    "Lead status transition + call log both audited with from/to",
+    "Frontend admin: 3 sidebar groups + all admin items visible; product-label=Recruitment CRM; QA + Bell(count) present; kpi-fresh_leads click -> /admin/leads?status=new; AccessControl page renders 5 tabs",
+    "Frontend recruiter: sidebar has My Day/My Leads but NO Access Control/Audit/Settings/Integrations/Import; /admin/settings, /admin/audit-logs, /admin/recruiters all show 'Access denied'; My Day page renders 7 myday-step-* items with progress %"
+  ],
+  "context_for_next_testing_agent": "test_recruitment_prompts3to6.py hardcodes exact seeded counts (fresh=8, interested=4, joined=2, leads_added_today=22, Jordan=17, Sam=5); the My Day live-update test permanently marks 1 today-followup done for recruiter Jordan so re-running that test after a fresh seed reset will still work but successive runs on the same DB shrink Jordan's today_followups. If the seed is re-run, all counts reset. Playwright test tool has a subtle quirk: including a literal '</script>' or unmatched f-string-like '{}' inside JS evaluate strings while the wrapper interprets the script yields 'invalid syntax line N' errors — pass raw Python only, no closing script tag. Sidebar container has data-testid='sidebar-nav' and each item is 'sidebar-nav-<last-url-segment>' (e.g. sidebar-nav-my-day). Access denied page renders inline within AdminLayout — url stays on /admin/settings etc. Bell count derived from /api/my-day (overdue+today+interviews)."
+}
