@@ -1,0 +1,49 @@
+{
+  "summary": "Prompts 06-10 end-to-end tested. Backend pytest: 29/29 PASS in /app/backend/tests/test_recruitment_prompts6to10.py (leads grid + views + filters + sort + pagination, duplicate check, unique lead + first_followup, flagged duplicate creation, detail, notes CRUD, activities, disposition engine branches: connected_interested->interested, callback_requested requires next_followup (400 without / 200 with), interview_scheduled requires interview details (400) and moves to lineup (200), not_interested requires closure_reason (400 -> 200), invalid_number finalizes as invalid, admin export CSV works and recruiter blocked 403, bulk assign persists new owner, admin auto-distribute distributes, recruiter cannot assign/auto-distribute, recruiter scope on /leads returns only own leads, recruiter GET other recruiter's lead -> 403). Frontend Playwright as admin: All 15 saved-view chips render (view-chip-all/fresh/not_called/todays_followups/overdue/no_followup/no_answer/interested/hot/interviews/attendance_pending/selected/joining_this_week/joined/rejected_lost). Grid shows 34 leads with pagination-info 'Page 1 of 2 · 34 total'; Fresh chip narrows to '15 total'. Search fills clear-filters-button; clear resets. Add-Lead: unique phone -> no duplicate-banner, saves successfully and appears in grid ('TEST_UI_Prompt7'). Re-open Add-Lead with the same phone -> duplicate-banner + dup-open-existing + dup-flag all render. Lead Drawer opens on lead-name click; note-input/note-save adds a note (note-edit-<id> visible); activity tab shows 3 activities. Row-phone -> call-action-modal with call-primary-phone/call-copy-number/call-dial-primary/call-timer/call-timer-toggle/call-log-disposition — Start timer ticks to 00:01. Row-dispo -> disposition-modal with dispo-outcome-select + duration + status-override + followup-date + quick-1h/today5/tom10/2days + save; selecting Callback Requested then applying quick +1H then save closes the modal successfully (dispo-modal count 0). Bulk-select rows -> bulk bar shows bulk-assign/bulk-transfer/bulk-distribute/bulk-clear for admin. RBAC frontend (recruiter Jordan Blake @ /admin/my-leads): only 18 own records; export-csv-button=0, auto-distribute-button=0; selecting a row shows only 'Clear selection' (bulk-assign/bulk-transfer/bulk-distribute all absent); add-lead-button remains (self-lead creation allowed).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_recruitment_prompts6to10.py",
+    "/app/test_reports/pytest/prompts6to10.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "recruitment_service.dispose: for outcome=connected_interested when target stays in ACTIVE_STATUSES and no next_followup and no existing next_followup, the code correctly forces 'This lead is still active — schedule the next follow-up'. But if the lead ALREADY has a pending future next_followup_at, that pending followup will be silently marked 'done' (elif connected branch) once the disposition saves — user has no explicit UI hint that the existing follow-up will be closed. Consider surfacing this in the modal.",
+    "recruitment_service.dispose validation flow: connected_interested moves an already-past-'contacted' lead nowhere (target=cur). If cur='not_interested' it stays not_interested silently — user might expect a bounce-back to interested. Consider warning when outcome semantics conflict with current status.",
+    "recruitment_service.auto_distribute: pool includes 'team_leader' role (line 552). Round-robin across recruiters + team-leaders may hand leads to TL — verify this matches business intent (spec says 'active recruiters in scope'). If not, restrict to role='recruiter'.",
+    "recruitment_service.assign_leads: does NOT enforce that target owner has leads.view_own permission or is a recruiter — could technically assign a lead to any active user (e.g. an accountant if one existed with is_active=true). Consider filtering by role in ['recruiter','team_leader'].",
+    "recruitment_routes.list_leads: uses require_permission only implicitly via internal check; other endpoints in this router use require_permission decorator. Consistent style is better.",
+    "recruitment_routes.export_leads: audit record captured after CSV generation — if generation succeeds but response send fails, the audit already claims 'exported'. Minor.",
+    "models.recruitment.DispositionCreate: status_override accepts ANY LEAD_STATUS, bypassing ALLOWED_TRANSITIONS guard (dispose() doesn't re-check ALLOWED_TRANSITIONS when status_override is present). An admin could override 'joined' back to 'new' via a call disposition. Consider running the same transition validation.",
+    "recruitment_service.dispose: target='selected' requires expected_joining_date (good) but does not require closure/joining record to satisfy REASON_REQUIRED — fine. However there is no explicit block on outcome=connected_interested paired with a status_override to 'joined' without an interview or joining flow — data integrity nit."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_recruitment_prompts6to10.py"
+  ],
+  "success_rate": {"backend": "100% (29/29)", "frontend": "100% of tested flows"},
+  "test_credentials": "Verified working: admin okhillare23@gmail.com/Admin@Oak2026; recruiter recruiter@oaksphere.demo/Recruiter@123; recruiter2 recruiter2@oaksphere.demo/Recruiter@456. TL not exercised in this iteration.",
+  "seed_data_creation": "Created TEST_ prefixed leads via API and UI: TEST_Prompt7_Unique, TEST_Dup_Flag, TEST_UI_Prompt7, TEST_Dispo_Interested, TEST_Dispo_Callback_NoFU, TEST_Dispo_Callback_OK, TEST_Dispo_Interview_Missing, TEST_Dispo_NotInt_NoReason, TEST_Dispo_Invalid, TEST_AutoDist_0/1/2. Bulk-assigned first 2 seeded leads to Sam Rivera (recruiter2) — the previous owner_id was overwritten (see transfer_history). Notes and follow-ups added on the UI-created lead. Not destructive; existing seeded data intact.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "verified_features": [
+    "GET /api/leads with pagination shape {items,total,page,page_size} and flags per row",
+    "Saved views: fresh, interested, joined, hot, todays_followups, overdue chips server-side filter (verified via UI counts, spot-checked via API)",
+    "Search + priority + sort_by=name asc all work server-side",
+    "POST /api/leads/check-duplicate returns {duplicate,lead} correctly",
+    "POST /api/leads creates unique lead with first_followup and next_followup_at is set",
+    "POST /api/leads with duplicate_ack=true creates flagged duplicate",
+    "Lead detail returns flags, owner_name, lead_age_days",
+    "Notes: add/list/edit/delete via /api/leads/:id/notes + /api/notes/:id",
+    "Activities recorded: created, note, followup_scheduled",
+    "Disposition engine: connected_interested->interested, callback_requested requires next_followup (400 without, 200 with), interview_scheduled requires details (400) and moves to lineup, not_interested requires closure_reason, invalid_number auto-finalizes to invalid",
+    "GET /api/leads/export returns CSV with header for admin; 403 for recruiter",
+    "POST /api/leads/assign updates owner_id; recruiter gets 403",
+    "POST /api/leads/auto-distribute distributes leads",
+    "Recruiter list_leads scoped to own owner_id; GET other recruiter's lead -> 403",
+    "Frontend admin: all 15 chip data-testids render; add-lead-button, export-csv-button, auto-distribute-button, filters, sort, pagination-info all present",
+    "Frontend duplicate banner appears on phone blur with dup-open-existing + dup-flag actions",
+    "Frontend drawer, call-action-modal (timer ticks), and disposition-modal (quick-1h fills followup and saves)",
+    "Frontend recruiter has no export/auto-distribute/bulk-assign/transfer/distribute buttons; My Leads scoped to 18 own records"
+  ],
+  "context_for_next_testing_agent": "Backend test file /app/backend/tests/test_recruitment_prompts6to10.py loads REACT_APP_BACKEND_URL from frontend/.env as fallback (needed because pytest env doesn't inherit it). Tests are idempotent (each dispo test creates its own fresh lead), but they use pytest.<attr> to stash created ids between tests within TestCreateAndDuplicate/TestDetailNotesActivity — those two classes are dependent-in-order. The bulk_assign test grabs the first 2 leads by last_activity_at desc and reassigns to recruiter2; this will keep migrating the same 'top-of-list' pair unless caller re-seeds. If seed data is re-imported, all counts reset. Playwright quirk reminded: never put backslashes inside f-strings — use string concatenation."
+}
