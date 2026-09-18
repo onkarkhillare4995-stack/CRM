@@ -24,7 +24,7 @@ export default function Vendors() {
     ]}
     columns={[]}
     renderCell={(r) => (
-      <div><p className="font-medium text-slate-900 dark:text-slate-100">{r.company} <Badge className="ml-2" variant="secondary">{(r.stage || "").replace(/_/g, " ")}</Badge></p>
+      <div><div className="font-medium text-slate-900 dark:text-slate-100">{r.company} <Badge className="ml-2" variant="secondary">{(r.stage || "").replace(/_/g, " ")}</Badge></div>
         <p className="mt-0.5 text-xs text-slate-500">{r.industry || "—"} · {r.contact_person || "—"} · {r.phone || "—"}</p></div>
     )} />;
 }

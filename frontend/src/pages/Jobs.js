@@ -21,7 +21,7 @@ export default function Jobs() {
     columns={[]}
     renderCell={(r) => (
       <div><p className="font-medium text-slate-900 dark:text-slate-100">{r.title} <span className="text-xs text-slate-400">· {r.client}</span></p>
-        <p className="mt-0.5 text-xs text-slate-500">{r.location || "—"} · {r.openings || 0} openings · {r.salary_min || "?"}-{r.salary_max || "?"} · {r.linked_leads} linked leads
-          <Badge className="ml-2" variant="secondary">{r.status}</Badge></p></div>
+        <div className="mt-0.5 text-xs text-slate-500">{r.location || "—"} · {r.openings || 0} openings · {r.salary_min || "?"}-{r.salary_max || "?"} · {r.linked_leads} linked leads
+          <Badge className="ml-2" variant="secondary">{r.status}</Badge></div></div>
     )} />;
 }

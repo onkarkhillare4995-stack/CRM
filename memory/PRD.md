@@ -22,6 +22,19 @@ Build a NEW production-grade Recruitment CRM from scratch, delivered over 37 fea
 - Immutable append-only audit log for meaningful actions.
 - Confirmation dialogs for destructive actions; deactivation preserves records + revokes sessions.
 
+## Implemented (2026-06 / Prompts 11-34 — Full CRM module suite)
+- Follow-ups (11): tabbed board (Due Today/Overdue/Tomorrow/Upcoming/Missed/Completed) with live counts, search + recruiter filter, Complete dialog (schedule-next OR move-to-final with reason/joining rules), Reschedule (supersedes prior), delete; timezone-safe overdue.
+- Tasks (12): summary cards, categories, priority/status filters, in-progress/done/reopen, edit/delete, audited.
+- Applications inbox (13): list/shortlist/convert-to-lead (transactional + idempotent — re-convert returns existing lead, no dup), preserves source/UTM/campaign, archive.
+- Interviews (14): All/Tomorrow tabs, inline stage + confirmation, edit/reschedule; Joinings (15): full status/confirmation pipeline, expected/actual date, salary, remarks; both update lead status via shared service.
+- Jobs (16), Clients (17 with submitted/interviewed/selected/joined stats), Vendors (18 with stages + industry + summary cards) — CRUD via reusable ResourceScreen, archive over hard-delete, linked counts.
+- Lead Sources & Marketing (19): channel KPIs + distribution + admin webhook simulation. Unified Templates (20): WhatsApp/Email tabs, variable insert + validation + preview + copy-formatted + duplicate (single templates collection).
+- Reports (22): Targets, Leaderboard (explicit score formula), Funnel, Lead Aging buckets, Missed Follow-ups — server-side aggregates. Action Required (23): 9 live exception cards. Lead Inbox (24): source summary + chips.
+- Integrations (25): AES/Fernet-encrypted secrets at rest, write-only fields, masked metadata returned (raw never), test/disconnect, audited, recruiter-blocked. Import (26): XLSX template, CSV/XLSX upload → batch preview → mapping/rules → idempotent chunked commit with per-row invalid/dup handling.
+- Notifications (27): per-user, unread count, mark read/all. Lead Tags (30): color catalog + counts + rename cascade. Global search (32) scope-safe. Centralized assignment/duplicate/status/SLA services (33/34) reused across modules.
+- Backend enforcement: every module scoped + permission-gated + audited; recruiter isolation verified (403 on integrations/reports/import/vendors/cross-recruiter).
+- Tests: 33/33 backend pytest (test_modules_prompts11to34.py) + full frontend E2E. Zero critical/minor blocking issues.
+
 ## Implemented (2026-06 / Prompts 6-10 — Leads Master Grid, Add/Edit, Detail Drawer, Dialer, Disposition)
 - Leads master grid (All Leads / My Leads): 15 saved-view chips (All, Fresh, Not Called, Today's Follow-ups, Overdue, No Follow-up, No Answer, Interested, Hot, Interviews, Attendance Pending, Selected, Joining This Week, Joined, Rejected/Lost) resolved server-side; filters (search name/phone/email/city, priority, status, source, tag, recruiter) with Clear-Filters active count; server-side pagination + sort; columns Candidate/Phone/Priority/Status/Tags/Recruiter/Next Follow-up/Actions; row flags (invalid phone, duplicate phone, overdue, no follow-up); row actions Call/Disposition/WhatsApp/Tags/Edit/Archive; bulk select (row + page) with Assign/Transfer/Auto-distribute/Clear; top actions Add/Export CSV/Auto-distribute (permission-gated).
 - Add/Edit Lead dialog: full field set (name, phone, alt phone, email, city, age, gender, qualification, experience, salaries, notice period, source, role, priority, assigned recruiter [hidden for recruiter], client, job, notes); create-only first follow-up (default tomorrow 10:00, reason 'First call'); duplicate check on phone blur + submit with Cancel/Open Existing/Create-as-flagged-duplicate; validation.

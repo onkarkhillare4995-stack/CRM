@@ -16,6 +16,7 @@ export default function ResourceScreen({ title, subtitle, endpoint, columns, fie
   const [search, setSearch] = useState(""); const [open, setOpen] = useState(false);
   const [editRow, setEditRow] = useState(null); const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false); const [sum, setSum] = useState(null);
+  const extraKey = JSON.stringify(extraParams);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -24,7 +25,8 @@ export default function ResourceScreen({ title, subtitle, endpoint, columns, fie
       setRows(data);
       if (summary) { const s = await api.get(summary); setSum(s.data); }
     } catch (e) { toast.error(formatApiError(e)); } finally { setLoading(false); }
-  }, [endpoint, search, JSON.stringify(extraParams), summary]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endpoint, search, extraKey, summary]);
   useEffect(() => { const t = setTimeout(load, 200); return () => clearTimeout(t); }, [load]);
 
   const openNew = () => { setEditRow(null); setForm(Object.fromEntries(fields.map((f) => [f.key, f.default ?? ""]))); setOpen(true); };

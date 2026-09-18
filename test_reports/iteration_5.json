@@ -1,0 +1,66 @@
+{
+  "summary": "Prompts 11-34 end-to-end tested. Backend pytest 33/33 PASS in /app/backend/tests/test_modules_prompts11to34.py covering: Jobs CRUD + validation, Clients CRUD, Vendors summary/CRUD (recruiter 403), Templates CRUD with channel validation + missing-body 400, Applications list + convert idempotent (second convert returns converted=false with same lead), Lead Inbox summary+items, Reports (leaderboard, targets, funnel, aging, missed) + recruiter 403, Action Required exactly 9 cards with expected keys + recruiter 403, Integrations list masked + save-encrypted + raw secret never returned + test + disconnect + recruiter 403, Import (xlsx template PK-magic, CSV preview+commit imported 2, commit idempotent replays same result, missing phone mapping -> 400, recruiter 403), Tags CRUD + duplicate-name 400, Notifications list + unread-count + read-all + per-user isolation, Followups board counts+tabs, Tasks summary+CRUD, Interviews/Joinings list, Global search, Org-settings. Frontend Playwright as admin: All 16 module pages load with expected data-testids (fu-tab-due_today/add-task-button/app-search/iv-tab-all/jn-status-filter/jobs-add/clients-add/vendors-add/tpl-add/rep-tab-targets/inbox-search/import-template/tag-add + Action Required, Lead Sources, Integrations by title). Followups board counts render live (5/5/4/0/1/2). Task create ('TEST_UI_Task_1') persists and shows in list. Applications page shows 1 convert + 1 shortlist testid. Integrations google_forms config dialog opens, secret is saved (toast 'Saved'). Reports all 5 tabs switchable. Action Required renders exactly 9 ar-card-* with live counts (overdue_followups=5, no_followup=25, never_called=18, unassigned=4, stale=0, selected_no_joining=2, unconfirmed_interviews=0, unconfirmed_joinings=1, below_target=4). Tags add flow with color picker saves successfully.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PUT /api/jobs/{id}, /api/clients/{id}, /api/vendors/{id}, /api/templates/{id}, /api/tags/{id}", "issue": "Update endpoints re-validate required fields as if creating (title+client, name, company, name+body, name). Partial PUT payloads fail with 400 'X is required'. Frontend works because ResourceScreen resends the full form, but any API client attempting a true patch will 400. Consider treating missing fields as no-op on updates."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Jobs row (Jobs.js:24) and Vendors row (Vendors.js:27)", "issue": "Hydration warning: <Badge> (renders a <div>) is placed inside a <p> element. React logs 'In HTML, <div> cannot be a descendant of <p>' twice in console. Does not break rendering but pollutes console.", "selector": "jobs-row-*, vendors-row-*", "priority": "LOW"},
+      {"component": "Tasks summary cards", "issue": "data-testid for 'High Priority' is task-summary-high (split-first-word), not task-summary-high_priority as agent notes suggest. Cosmetic; label displayed correctly.", "selector": "[data-testid='task-summary-high']", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_modules_prompts11to34.py",
+    "/app/test_reports/pytest/prompts11to34.xml"
+  ],
+  "action_items": [
+    "(Optional) Loosen validation on save_job/save_client/save_vendor/save_template/save_tag when job_id/client_id/... is provided so partial PUT payloads do not fail.",
+    "(Optional) Fix hydration warning in Jobs.js:24 and Vendors.js:27 by wrapping title text and Badge in a <div> or <span> instead of a <p>.",
+    "(Optional) Align task-summary-high data-testid with docs (task-summary-high_priority) or update docs."
+  ],
+  "critical_code_review_comments": [
+    "modules_service.save_job/save_client/save_vendor/save_template/save_tag: run 'required fields' validation on both create and update paths. On update this makes PUT non-idempotent for partial payloads (returns 400). Prefer requiring fields only when creating, or merge with existing doc before validating on update.",
+    "modules_service.list_integrations returns the masked map from db.integrations.fields['fields'] which already stores the mask string at save time (e.g. '••••SECRET'), never the raw. Good. However the inline expression 'masked[f] = _mask(rec.get(\"_dec\", {}).get(f)) if False else ...' is dead code (branch always False) and confusing — remove the false branch.",
+    "modules_service.convert_application: when an existing lead with the same phone_normalized is found, endpoint updates the application to status='converted' without creating a follow-up or activity for the existing lead. Consider writing a merge activity for auditability.",
+    "modules_service.import_commit: 'assign=auto' pool includes team_leader role in addition to recruiter. Same finding as prior iteration — confirm business intent.",
+    "modules_service.import_preview stores the ENTIRE uploaded CSV/XLSX (data_rows) into MongoDB under db.import_batches for up to 2 hours. For a 5MB CSV this can be tens of thousands of rows per user — consider TTL index on expires_at and/or storing on disk for large files.",
+    "action_required endpoint enforces admin/recruiters.view/users.manage via inline check, but recruiters are the ones with the actual overdue/no-followup/never-called workload. Consider a recruiter-scoped variant so recruiters can see their own actionable items rather than a 403.",
+    "modules_routes.import_preview + import_commit: both use require_permission('imports.run'). commit_requires_phone_mapping test confirms 400 is returned. Good. But there is no validation that commit is called by the same actor who ran preview — any user with imports.run could commit another user's batch_id (batch['actor_id'] is stored but never checked).",
+    "notifications list endpoint: no pagination — returns all notifications unbounded. For long-running users this will grow.",
+    "modules_service.list_templates does not scope by ownership; all users see all templates. If templates are ever role/team-scoped, revisit.",
+    "modules_service.save_integration deletes-and-replaces secrets_enc entirely on each save. If UI sends only ONE of many fields (e.g. rotating webhook token), the other stored fields are wiped. Verify UI always resends the full field set or switch save to merge-update."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_modules_prompts11to34.py"
+  ],
+  "success_rate": {"backend": "100% (33/33)", "frontend": "100% of tested flows"},
+  "test_credentials": "Verified working: admin okhillare23@gmail.com/Admin@Oak2026; recruiter recruiter@oaksphere.demo/Recruiter@123.",
+  "seed_data_creation": "Created via API: TEST_Client_C1, TEST_Client_J, TEST_Vendor_V1, TEST_Tpl1, TEST_Job11, TEST_Tag_<epoch>, TEST_Imp_A/B leads (imported via CSV commit). Created via UI: TEST_UI_Task_1 task, TEST_UI_Tag_<epoch> lead-tag, and google_forms integration credential (TEST_UI_SECRET_123456 — masked at rest). One additional application was converted to a lead during idempotency verification (if the seed did not already contain a converted one).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "verified_features": [
+    "Jobs/Clients/Vendors/Templates/Tags full CRUD via /api",
+    "Vendors summary aggregation returns {empanelled,proposals,active}",
+    "Applications idempotent convert (second call returns converted=false with same lead)",
+    "Reports /api/reports?tab=leaderboard|targets|funnel|aging|missed all return typed payloads with score_formula and 5 aging buckets",
+    "Action Required returns exactly 9 cards with all expected keys and live counts",
+    "Integrations: save encrypts (raw secret never re-returned), list returns masked values only, test/disconnect work, recruiter 403",
+    "Import: XLSX template downloads (PK magic bytes), CSV preview returns batch_id + supported_fields, commit reports imported/flagged/skipped, second commit is idempotent (same result), missing phone mapping -> 400",
+    "Tags: CRUD + duplicate-name -> 400, lead_count included",
+    "Notifications: list/unread-count/read-all all 200, per-user isolation confirmed (no id overlap between admin and recruiter)",
+    "Followups board tabs+counts (due_today/overdue/tomorrow/upcoming/missed/completed)",
+    "Tasks CRUD + summary (pending/high_priority/completed) via API and UI create",
+    "Interviews/Joinings list endpoints return arrays",
+    "Global search returns {results} for 2+ char queries",
+    "RBAC: recruiter blocked (403) on /vendors, /reports, /integrations, /import/*, /action-required",
+    "Frontend: 16 module pages load with expected data-testids; sidebar navigation works",
+    "Frontend integrations dialog saves secret with toast 'Saved'",
+    "Frontend action-required renders 9 cards with live counts (5/25/18/4/0/2/0/1/4)"
+  ],
+  "context_for_next_testing_agent": "test_modules_prompts11to34.py runs under pytest-xdist (parallel). Each test creates its own TEST_* data. Integration test overwrites google_forms integration credentials then disconnects it, so google_forms will be 'not_connected' after the run — reseed if UI test expects it connected. Import commit test inserts 2 TEST_Imp_* leads per run; consider cleanup if lead counts matter across iterations. task-summary testids are task-summary-{first-word-lowercased}: 'pending', 'high', 'completed' — the agent-provided testid list mentioned task-summary-high_priority which does NOT exist in DOM. Frontend logs benign hydration warnings for Jobs.js:24 and Vendors.js:27 (Badge inside <p>)."
+}
