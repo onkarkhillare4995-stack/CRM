@@ -537,6 +537,9 @@ async def assign_leads(db, actor, perms, lead_ids, to_owner_id):
             await write_activity(db, l["id"], "assignment", actor,
                                  f"Assigned to {target.get('name')}",
                                  {"from": l["owner_id"], "to": to_owner_id}, session=s)
+    from services import notify_service
+    await notify_service.notify(db, recipient_id=to_owner_id, type_="lead_assigned",
+                                title=f"{len(leads)} lead(s) assigned to you", entity_type="lead")
     return {"assigned": len(leads), "to_owner_id": to_owner_id}
 
 

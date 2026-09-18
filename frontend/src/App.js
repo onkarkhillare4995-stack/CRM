@@ -11,11 +11,24 @@ import MyDay from "@/pages/MyDay";
 import Leads from "@/pages/Leads";
 import Followups from "@/pages/Followups";
 import Tasks from "@/pages/Tasks";
+import Applications from "@/pages/Applications";
+import Interviews from "@/pages/Interviews";
+import Joinings from "@/pages/Joinings";
+import Jobs from "@/pages/Jobs";
+import Clients from "@/pages/Clients";
+import Vendors from "@/pages/Vendors";
+import Templates from "@/pages/Templates";
+import Reports from "@/pages/Reports";
+import ActionRequired from "@/pages/ActionRequired";
+import LeadInbox from "@/pages/LeadInbox";
+import LeadSources from "@/pages/LeadSources";
+import Integrations from "@/pages/Integrations";
+import ImportLeads from "@/pages/ImportLeads";
+import Tags from "@/pages/Tags";
 import AccessControl from "@/pages/AccessControl";
 import AuditLog from "@/pages/AuditLog";
 import Settings from "@/pages/Settings";
 import Notifications from "@/pages/Notifications";
-import Placeholder from "@/pages/Placeholder";
 
 function App() {
   return (
@@ -35,24 +48,24 @@ function App() {
             <Route path="calling-list" element={<ProtectedRoute><Leads variant="calling" /></ProtectedRoute>} />
             <Route path="followups" element={<ProtectedRoute permission="followups.manage"><Followups /></ProtectedRoute>} />
             <Route path="tasks" element={<ProtectedRoute permission="tasks.manage"><Tasks /></ProtectedRoute>} />
+            <Route path="applications" element={<ProtectedRoute><Applications /></ProtectedRoute>} />
+            <Route path="interviews" element={<ProtectedRoute permission="interviews.manage"><Interviews /></ProtectedRoute>} />
+            <Route path="joining" element={<ProtectedRoute permission="joinings.manage"><Joinings /></ProtectedRoute>} />
+            <Route path="jobs" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
+            <Route path="clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
+            <Route path="vendors" element={<ProtectedRoute permission="vendors.manage"><Vendors /></ProtectedRoute>} />
+            <Route path="lead-sources" element={<ProtectedRoute><LeadSources /></ProtectedRoute>} />
+            <Route path="templates" element={<ProtectedRoute permission="templates.manage"><Templates /></ProtectedRoute>} />
             <Route path="recruiters" element={<ProtectedRoute permission="recruiters.view"><AccessControl /></ProtectedRoute>} />
+            <Route path="reports" element={<ProtectedRoute permission="reports.view"><Reports /></ProtectedRoute>} />
+            <Route path="action-required" element={<ProtectedRoute><ActionRequired /></ProtectedRoute>} />
+            <Route path="lead-inbox" element={<ProtectedRoute><LeadInbox /></ProtectedRoute>} />
+            <Route path="integrations" element={<ProtectedRoute permission="integrations.manage"><Integrations /></ProtectedRoute>} />
+            <Route path="import-leads" element={<ProtectedRoute permission="imports.run"><ImportLeads /></ProtectedRoute>} />
+            <Route path="lead-tags" element={<ProtectedRoute permission="settings.manage"><Tags /></ProtectedRoute>} />
             <Route path="notifications" element={<ProtectedRoute permission="dashboard.view"><Notifications /></ProtectedRoute>} />
             <Route path="audit-logs" element={<ProtectedRoute permission="audit.view"><AuditLog /></ProtectedRoute>} />
             <Route path="settings" element={<ProtectedRoute permission="settings.manage"><Settings /></ProtectedRoute>} />
-
-            <Route path="applications" element={<Placeholder title="Applications" />} />
-            <Route path="interviews" element={<Placeholder title="Interviews" />} />
-            <Route path="joining" element={<Placeholder title="Joining" />} />
-            <Route path="jobs" element={<Placeholder title="Jobs" />} />
-            <Route path="clients" element={<Placeholder title="Clients" />} />
-            <Route path="vendors" element={<Placeholder title="Vendors & Empanelment" />} />
-            <Route path="lead-sources" element={<Placeholder title="Lead Sources & Ads" />} />
-            <Route path="templates" element={<Placeholder title="Templates" />} />
-            <Route path="reports" element={<Placeholder title="Reports" />} />
-            <Route path="action-required" element={<Placeholder title="Action Required" />} />
-            <Route path="lead-inbox" element={<Placeholder title="Lead Inbox" />} />
-            <Route path="integrations" element={<Placeholder title="Integrations" />} />
-            <Route path="import-leads" element={<Placeholder title="Import Leads" />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />

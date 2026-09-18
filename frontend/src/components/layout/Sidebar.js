@@ -44,6 +44,7 @@ const GROUPS = [
       { to: "/admin/import-leads", label: "Import Leads", icon: Upload, perm: "imports.run" },
       { to: "/admin/notifications", label: "Notifications", icon: Bell, perm: "dashboard.view" },
       { to: "/admin/audit-logs", label: "Audit Logs", icon: ScrollText, perm: "audit.view" },
+      { to: "/admin/lead-tags", label: "Lead Tags", icon: MessageSquareText, perm: "settings.manage" },
       { to: "/admin/settings", label: "Settings", icon: Settings, perm: "settings.manage" },
     ],
   },

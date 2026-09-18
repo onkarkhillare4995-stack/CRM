@@ -18,6 +18,7 @@ from api.audit_routes import router as audit_router
 from api.dashboard_routes import dashboard_router, myday_router
 from api.settings_routes import router as settings_router
 from api.recruitment_routes import router as recruitment_router
+from api.modules_routes import router as modules_router
 
 logger = logging.getLogger("app.main")
 
@@ -44,6 +45,7 @@ api_router.include_router(dashboard_router)
 api_router.include_router(myday_router)
 api_router.include_router(settings_router)
 api_router.include_router(recruitment_router)
+api_router.include_router(modules_router)
 
 app.include_router(api_router)
 
